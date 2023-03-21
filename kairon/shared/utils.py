@@ -1628,13 +1628,27 @@ class Utility:
         except AttributeError:
             action = kwargs.get("action")
 
-        audit_log = AuditLogData(bot=document.bot,
+        auditlog_id, mapping = Utility.get_auditlog_id_and_mapping(document)
+
+        audit_log = AuditLogData(auditlog_id=auditlog_id,
+                                 mapping=mapping,
                                  user=document.user,
                                  action=action,
                                  entity=name,
                                  data=document.to_mongo().to_dict())
         Utility.publish_auditlog(auditlog=audit_log, event_url=kwargs.get("event_url"))
         audit_log.save()
+
+    @staticmethod
+    def get_auditlog_id_and_mapping(document):
+        try:
+            auditlog_id = document.bot.__str__()
+            mapping = "Bot_id"
+        except AttributeError:
+            auditlog_id = document.id.__str__()
+            mapping = f"{document._class_name.__str__()}_id"
+
+        return auditlog_id, mapping
 
     @staticmethod
     def publish_auditlog(auditlog, event_url=None):
@@ -1650,6 +1664,9 @@ class Utility:
             if ws_url is not None:
                 Utility.execute_http_request(request_method=method, http_url=ws_url,
                                              request_body=auditlog.to_mongo().to_dict(), headers=headers, timeout=5)
+        except AttributeError:
+            logger.warning("Bot level configuration not found, Could not publish the log")
+            return
         except (DoesNotExist, AppException):
             return
 

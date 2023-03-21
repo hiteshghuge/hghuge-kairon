@@ -9,12 +9,13 @@ from mongoengine import (
 )
 
 from kairon.idp.constants import IDPConfigType
+from kairon.shared.data.base_data import Auditlog
 from kairon.shared.data.signals import auditlogger
 from kairon.shared.utils import Utility
 
 
 @auditlogger.log
-class IdpConfig(Document):
+class IdpConfig(Auditlog):
     user = StringField(required=True)
     account = ListField(required=True)
     organization = StringField(required=True)

@@ -10489,7 +10489,8 @@ def test_initiate_bsp_onboarding_failure(monkeypatch):
     assert actual["data"] is None
 
 
-def test_initiate_bsp_onboarding_disabled():
+def test_initiate_bsp_onboarding_disabled(monkeypatch):
+    monkeypatch.setitem(Utility.environment["channels"]["360dialog"], 'partner_id', 'f167CmPA')
     response = client.post(
         f"/api/bot/{pytest.bot}/channels/whatsapp/360dialog/onboarding?client_name=kairon&client_id=sdfgh5678&channel_id=sdfghjk678",
         headers={"Authorization": pytest.token_type + " " + pytest.access_token},
@@ -12674,10 +12675,10 @@ def test_get_auditlog_for_user_1():
     actual = response.json()
     assert actual["data"] is not None
     assert actual["data"][0]["action"] == AuditlogActions.SAVE.value
-    assert actual["data"][0]["entity"] == "Slots"
+    assert actual["data"][0]["entity"] == "BotAccess"
     assert actual["data"][0]["user"] == email
 
-    assert actual["data"][0]["action"] == AuditlogActions.SAVE.value
+    assert actual["data"][0]["mapping"] == "Bot_id"
 
 
 def test_get_auditlog_for_bot():
@@ -12720,7 +12721,7 @@ def test_get_auditlog_for_user_2():
     assert counter.get(AuditlogActions.UPDATE.value) > 5
 
     assert audit_log_data[0]["action"] == AuditlogActions.UPDATE.value
-    assert audit_log_data[0]["entity"] == "Slots"
+    assert audit_log_data[0]["entity"] == "ModelTraining"
     assert audit_log_data[0]["user"] == email
 
 
