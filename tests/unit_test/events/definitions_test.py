@@ -25,7 +25,7 @@ from kairon.shared.account.processor import AccountProcessor
 from kairon.shared.chat.notifications.processor import MessageBroadcastProcessor
 from kairon.shared.constants import EventClass, EventRequestType
 from kairon.shared.data.constant import EVENT_STATUS, TrainingDataSourceType
-from kairon.shared.data.data_objects import EndPointHistory, Endpoints
+from kairon.shared.data.data_objects import EndPointHistory, Endpoints, BotSettings
 from kairon.shared.data.history_log_processor import HistoryDeletionLogProcessor
 from kairon.shared.data.model_processor import ModelProcessor
 from kairon.shared.data.training_data_generation_processor import TrainingDataGenerationProcessor
@@ -49,6 +49,9 @@ class TestEventDefinitions:
         os.environ["system_file"] = "./tests/testing_data/system.yaml"
         Utility.load_environment()
         connect(**Utility.mongoengine_connection(Utility.environment['database']["url"]))
+        BotSettings(bot="test_definitions", user="test_user").save()
+        BotSettings(bot="test_definitions_bot", user="test_user").save()
+        BotSettings(bot="test_faq", user="test_user").save()
 
     def test_data_importer_presteps_no_training_files(self):
         bot = 'test_definitions'
@@ -62,7 +65,9 @@ class TestEventDefinitions:
         user = 'test_user'
         file_path = 'tests/testing_data/all/config.yml'
         file = UploadFile(filename="file.yml", file=BytesIO(open(file_path, 'rb').read()))
-        monkeypatch.setitem(Utility.environment['model']['data_importer'], 'limit_per_day', 0)
+        bot_settings = BotSettings.objects(bot=bot).get()
+        bot_settings.data_importer_limit_per_day = 0
+        bot_settings.save()
 
         with pytest.raises(AppException, match="Daily limit exceeded."):
             TrainingDataImporterEvent(bot, user).validate(is_data_uploaded=True, training_files=[file])
@@ -72,8 +77,12 @@ class TestEventDefinitions:
         user = 'test_user'
         file_path = 'tests/testing_data/all/config.yml'
         file = UploadFile(filename="config.yml", file=BytesIO(open(file_path, 'rb').read()))
+        bot_settings = BotSettings.objects(bot=bot).get()
+        bot_settings.data_importer_limit_per_day = 5
+        bot_settings.save()
 
-        assert not TrainingDataImporterEvent(bot, user, overwrite=True).validate(is_data_uploaded=True, training_files=[file])
+        assert not TrainingDataImporterEvent(bot, user, overwrite=True).validate(is_data_uploaded=True,
+                                                                                 training_files=[file])
 
     def test_data_importer_presteps_event(self):
         bot = 'test_definitions'
@@ -81,7 +90,8 @@ class TestEventDefinitions:
         file_path = 'tests/testing_data/all/domain.yml'
         file = UploadFile(filename="domain.yml", file=BytesIO(open(file_path, 'rb').read()))
 
-        assert TrainingDataImporterEvent(bot, user).validate(is_data_uploaded=True, training_files=[file], overwrite=True)
+        assert TrainingDataImporterEvent(bot, user).validate(is_data_uploaded=True, training_files=[file],
+                                                             overwrite=True)
         logs = list(DataImporterLogProcessor.get_logs(bot))
         assert len(logs) == 2
         assert logs[0]['files_received'] == ['domain']
@@ -153,7 +163,8 @@ class TestEventDefinitions:
         file_path = 'tests/testing_data/all/data/nlu.md'
         file = UploadFile(filename="nlu.md", file=BytesIO(open(file_path, 'rb').read()))
 
-        assert TrainingDataImporterEvent(bot, user).validate(is_data_uploaded=True, training_files=[file], overwrite=True)
+        assert TrainingDataImporterEvent(bot, user).validate(is_data_uploaded=True, training_files=[file],
+                                                             overwrite=True)
         logs = list(DataImporterLogProcessor.get_logs(bot))
         assert len(logs) == 2
         assert logs[0]['files_received'] == ['nlu']
@@ -177,7 +188,9 @@ class TestEventDefinitions:
         user = 'test_user'
         file_path = 'tests/testing_data/all/config.yml'
         file = UploadFile(filename="file.yml", file=BytesIO(open(file_path, 'rb').read()))
-        monkeypatch.setitem(Utility.environment['model']['data_importer'], 'limit_per_day', 0)
+        bot_settings = BotSettings.objects(bot=bot).get()
+        bot_settings.data_importer_limit_per_day = 0
+        bot_settings.save()
 
         with pytest.raises(AppException, match="Daily limit exceeded."):
             FaqDataImporterEvent(bot, user).validate(training_data_file=file)
@@ -187,6 +200,9 @@ class TestEventDefinitions:
         user = 'test_user'
         config = "Questions,Answer,\nWhat is Digite?, IT Company,\nHow are you?, I am good,\nWhat day is it?, It is Thursday,\n   ,  ,\nWhat day is it?, It is Thursday,\n".encode()
         file = UploadFile(filename="config.csv", file=BytesIO(config))
+        bot_settings = BotSettings.objects(bot=bot).get()
+        bot_settings.data_importer_limit_per_day = 5
+        bot_settings.save()
         FaqDataImporterEvent(bot, user).validate(training_data_file=file)
         logs = list(DataImporterLogProcessor.get_logs(bot))
         assert len(logs) == 1
@@ -333,6 +349,7 @@ class TestEventDefinitions:
 
         def _mock_validation(*args, **kwargs):
             return None
+
         monkeypatch.setattr(DataUtility, "validate_existing_data_train", _mock_validation)
         ModelTrainingEvent(bot, user).validate()
         logs = list(ModelProcessor.get_training_history(bot))
@@ -373,6 +390,7 @@ class TestEventDefinitions:
 
         def _mock_validation(*args, **kwargs):
             return None
+
         monkeypatch.setattr(DataUtility, "validate_existing_data_train", _mock_validation)
         with pytest.raises(AppException, match="Previous model training in progress."):
             ModelTrainingEvent(bot, user).validate()
@@ -383,8 +401,11 @@ class TestEventDefinitions:
 
         def _mock_validation(*args, **kwargs):
             return None
+
         monkeypatch.setattr(DataUtility, "validate_existing_data_train", _mock_validation)
-        monkeypatch.setitem(Utility.environment['model']['train'], 'limit_per_day', 0)
+        bot_settings = BotSettings.objects(bot=bot).get()
+        bot_settings.training_limit_per_day = 0
+        bot_settings.save()
         with pytest.raises(AppException, match="Daily model training limit exceeded."):
             ModelTrainingEvent(bot, user).validate()
 
@@ -435,6 +456,7 @@ class TestEventDefinitions:
 
         def _mock_validation(*args, **kwargs):
             return None
+
         monkeypatch.setattr(Utility, "is_model_file_exists", _mock_validation)
         ModelTestingEvent(bot, user).validate()
         logs = list(ModelTestingLogProcessor.get_logs(bot))
@@ -470,6 +492,7 @@ class TestEventDefinitions:
 
         def _mock_validation(*args, **kwargs):
             return None
+
         monkeypatch.setattr(Utility, "is_model_file_exists", _mock_validation)
         with pytest.raises(AppException, match='Event already in progress! Check logs.'):
             ModelTestingEvent(bot, user).validate()
@@ -483,8 +506,11 @@ class TestEventDefinitions:
 
         def _mock_validation(*args, **kwargs):
             return None
+
         monkeypatch.setattr(Utility, "is_model_file_exists", _mock_validation)
-        monkeypatch.setitem(Utility.environment['model']['test'], 'limit_per_day', 0)
+        bot_settings = BotSettings.objects(bot=bot).get()
+        bot_settings.test_limit_per_day = 0
+        bot_settings.save()
         with pytest.raises(AppException, match='Daily limit exceeded.'):
             ModelTestingEvent(bot, user).validate()
         logs = list(ModelTestingLogProcessor.get_logs(bot))
@@ -855,9 +881,9 @@ class TestEventDefinitions:
                 event.enqueue(EventRequestType.add_schedule.value, config=config)
 
         config["scheduler_config"] = {
-                "expression_type": "cron",
-                "schedule": "57 22 * * *"
-            }
+            "expression_type": "cron",
+            "schedule": "57 22 * * *"
+        }
         with pytest.raises(AppException, match=f"Channel 'whatsapp' not configured!"):
             event.enqueue(EventRequestType.add_schedule.value, config=config)
 
@@ -1090,10 +1116,12 @@ class TestEventDefinitions:
         config.pop("user")
         config.pop("bot")
         assert config == {'name': 'first_scheduler', 'connector_type': 'whatsapp',
-                          'scheduler_config': {'expression_type': 'cron', 'schedule': '57 22 * * *', "timezone": "Asia/Kolkata"},
+                          'scheduler_config': {'expression_type': 'cron', 'schedule': '57 22 * * *',
+                                               "timezone": "Asia/Kolkata"},
                           'recipients_config': {'recipient_type': 'static', 'recipients': "918958030541,"},
-                          'template_config': [{'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
-                                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
+                          'template_config': [
+                              {'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
+                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
 
     @responses.activate
     def test_update_message_broadcast_event_server_failure(self):
@@ -1139,10 +1167,12 @@ class TestEventDefinitions:
         config.pop("user")
         config.pop("bot")
         assert config == {'name': 'first_scheduler', 'connector_type': 'whatsapp',
-                          'scheduler_config': {'expression_type': 'cron', 'schedule': '57 22 * * *', "timezone": "Asia/Kolkata"},
+                          'scheduler_config': {'expression_type': 'cron', 'schedule': '57 22 * * *',
+                                               "timezone": "Asia/Kolkata"},
                           'recipients_config': {'recipient_type': 'static', 'recipients': "918958030541,"},
-                          'template_config': [{'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
-                                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
+                          'template_config': [
+                              {'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
+                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
 
     @responses.activate
     def test_update_message_broadcast(self):
@@ -1189,8 +1219,9 @@ class TestEventDefinitions:
         assert config == {'name': 'first_scheduler', 'connector_type': 'whatsapp',
                           'scheduler_config': {'expression_type': 'cron', 'schedule': '11 11 * * *', "timezone": "GMT"},
                           'recipients_config': {'recipient_type': 'static', 'recipients': "919756653433,918958030541,"},
-                          'template_config': [{'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
-                                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
+                          'template_config': [
+                              {'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
+                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
 
     def test_update_message_broadcast_invalid_config(self):
         bot = "test_add_schedule_event"
@@ -1232,8 +1263,9 @@ class TestEventDefinitions:
         assert config == {'name': 'first_scheduler', 'connector_type': 'whatsapp',
                           'scheduler_config': {'expression_type': 'cron', 'schedule': '11 11 * * *', "timezone": "GMT"},
                           'recipients_config': {'recipient_type': 'static', 'recipients': "919756653433,918958030541,"},
-                          'template_config': [{'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
-                                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
+                          'template_config': [
+                              {'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
+                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
 
     def test_delete_message_broadcast_event_server_failure(self):
         bot = "test_add_schedule_event"
@@ -1254,8 +1286,9 @@ class TestEventDefinitions:
         assert config == {'name': 'first_scheduler', 'connector_type': 'whatsapp',
                           'scheduler_config': {'expression_type': 'cron', 'schedule': '11 11 * * *', "timezone": "GMT"},
                           'recipients_config': {'recipient_type': 'static', 'recipients': "919756653433,918958030541,"},
-                          'template_config': [{'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
-                                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
+                          'template_config': [
+                              {'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
+                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
 
     @responses.activate
     def test_delete_message_broadcast_failure(self):
@@ -1285,8 +1318,9 @@ class TestEventDefinitions:
         assert config == {'name': 'first_scheduler', 'connector_type': 'whatsapp',
                           'scheduler_config': {'expression_type': 'cron', 'schedule': '11 11 * * *', "timezone": "GMT"},
                           'recipients_config': {'recipient_type': 'static', 'recipients': "919756653433,918958030541,"},
-                          'template_config': [{'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
-                                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
+                          'template_config': [
+                              {'language': 'en', 'template_type': 'static', 'template_id': 'brochure_pdf',
+                               'namespace': '13b1e228_4a08_4d19_a0da_cdb80bc76380'}]}
 
     @responses.activate
     def test_delete_message_broadcast(self):

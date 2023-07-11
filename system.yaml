@@ -22,7 +22,7 @@ security:
   algorithm: "HS256"
   token_expire: ${TOKEN_EXPIRE:10080}
   refresh_token_expire: ${REFRESH_TOKEN_EXPIRE:11520}
-  fernet_key: ${FERNET_KEY:"gH8F9M-3GTxT1z-XyvJXZlCfxfbMuFr2HgXDHl7Xkuw="}
+  fernet_key: ${FERNET_KEY:"wR-TyXpE5ohf-8ZRCWrhdTg_5q5wIrdl1V81IwBy4og="}
   integrations_per_user: ${INTEGRATIONS_PER_USER:2}
   validate_recaptcha: ${VALIDATE_RECAPTCHA:false}
   recaptcha_secret: ${RECAPTCHA_SECRET}
