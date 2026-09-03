@@ -1601,6 +1601,7 @@ class UpsertCustomerRequest(BaseModel):
 
 
 class CreateOrderRequest(BaseModel):
+    callback_identifier: str
     sender_id: str
     persona_type: Optional[str] = None
     order_details: Dict[str, Any]

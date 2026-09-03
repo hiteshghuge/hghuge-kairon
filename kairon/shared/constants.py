@@ -194,6 +194,7 @@ class KaironSystemSlots(str, Enum):
     user_identifier = 'user_identifier'
     temp_token = 'temp_token'
     store_page_name = 'store_page_name'
+    callback_identifier = 'callback_identifier'
     llm_call_id = "llm_call_id"
 
 

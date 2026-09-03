@@ -307,6 +307,7 @@ class TestCreateOrder:
             bot=self.bot, sender_id=self.enc,
             persona_type="fnb",
             order_payload={"item": "Pizza", "qty": 2, "price": 499},
+            callback_identifier="test_cb",
         )
         assert "order_id" in result
         assert result["payment_id"] is None
@@ -318,6 +319,7 @@ class TestCreateOrder:
                 bot=self.bot, sender_id=_enc("no_customer"),
                 persona_type="fnb",
                 order_payload={"item": "Soda"},
+                callback_identifier="test_cb",
             )
 
 
@@ -334,6 +336,7 @@ class TestGetOrder:
             bot=self.bot, sender_id=enc,
             persona_type="fnb",
             order_payload={"item": "Pasta", "qty": 1, "price": 299},
+            callback_identifier="test_cb",
         )
 
     def test_get_order_success(self):
@@ -365,6 +368,7 @@ class TestUpdateOrderStatus:
             bot=self.bot, sender_id=enc,
             persona_type="fnb",
             order_payload={"item": "Coffee", "qty": 2, "price": 120},
+            callback_identifier="test_cb",
         )
 
     def test_update_status_placed_to_confirmed(self):
@@ -389,6 +393,7 @@ class TestUpdateOrderStatus:
         order = CustomerOrderProcessor.create_order(
             bot=bot, sender_id=enc,
             persona_type="fnb", order_payload={"item": "X", "qty": 1, "price": 10},
+            callback_identifier="test_cb",
         )
         CustomerOrderProcessor.update_order_status(bot=bot, order_id=order["order_id"], new_status="confirmed")
         CustomerOrderProcessor.update_order_status(bot=bot, order_id=order["order_id"], new_status="in_progress")
@@ -413,6 +418,7 @@ class TestUpdateOrderStatus:
         order = CustomerOrderProcessor.create_order(
             bot=bot, sender_id=enc,
             persona_type="fnb", order_payload={"item": "Y", "qty": 1, "price": 10},
+            callback_identifier="test_cb",
         )
         result = CustomerOrderProcessor.update_order_status(
             bot=bot, order_id=order["order_id"], new_status="cancelled",
@@ -433,6 +439,7 @@ class TestUpdateOrder:
             bot=self.bot, sender_id=enc,
             persona_type="fnb",
             order_payload={"item": "Tea", "qty": 1, "price": 30},
+            callback_identifier="test_cb",
         )
         self.order_id = self.order["order_id"]
 
@@ -530,6 +537,7 @@ class TestListOrders:
             CustomerOrderProcessor.create_order(
                 bot=cls.bot, sender_id=cls.enc,
                 persona_type="fnb", order_payload={"item": f"item_{i}", "qty": i + 1, "price": (i + 1) * 100},
+                callback_identifier="test_cb",
             )
 
     def test_list_orders_for_customer_returns_all(self):
@@ -572,6 +580,7 @@ class TestFilterOrders:
             CustomerOrderProcessor.create_order(
                 bot=cls.bot, sender_id=enc,
                 persona_type="fnb", order_payload={"item": item, "price": price},
+                callback_identifier="test_cb",
             )
 
     def test_filter_orders_no_filters_returns_all(self):
@@ -905,6 +914,7 @@ class TestCreateOrderPaymentEnabled:
             bot=self.bot, sender_id=self.enc,
             persona_type="fnb",
             order_payload={"item": "Coffee", "amount": 80},
+            callback_identifier="test_cb",
         )
         assert "order_id" in result
         assert result["payment_id"] is None
@@ -918,6 +928,7 @@ class TestCreateOrderPaymentEnabled:
                 bot=self.bot, sender_id=self.enc,
                 persona_type="fnb",
                 order_payload={"item": "Pizza", "amount": 200},
+                callback_identifier="test_cb",
             )
 
     def test_payment_enabled_razorpay_success_returns_payment_fields(self):
@@ -935,6 +946,7 @@ class TestCreateOrderPaymentEnabled:
                     bot=self.bot, sender_id=self.enc,
                     persona_type="fnb",
                     order_payload={"item": "Burger", "amount": 150},
+                    callback_identifier="cb_001",
                 )
         assert result["payment_id"] == "pay_xyz"
         assert result["payment_link"] == "https://rzp.io/xyz"
@@ -960,6 +972,7 @@ class TestCreateOrderPaymentEnabled:
                         bot=self.bot, sender_id=self.enc,
                         persona_type="fnb",
                         order_payload={"item": "Drink", "amount": 50},
+                        callback_identifier="test_cb",
                     )
 
     def test_payment_enabled_network_error_logs_warning_returns_order(self):
@@ -975,6 +988,7 @@ class TestCreateOrderPaymentEnabled:
                         bot=self.bot, sender_id=self.enc,
                         persona_type="fnb",
                         order_payload={"item": "Tea", "amount": 30},
+                        callback_identifier="test_cb",
                     )
         assert "order_id" in result
         assert result["payment_id"] is None

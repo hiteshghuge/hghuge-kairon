@@ -1717,7 +1717,7 @@ class MongoProcessor:
             KaironSystemSlots.order.value, KaironSystemSlots.flow_reply.value,
             KaironSystemSlots.http_status_code.value, KaironSystemSlots.payment.value,
             KaironSystemSlots.user_identifier.value, KaironSystemSlots.temp_token.value,
-            KaironSystemSlots.store_page_name.value,
+            KaironSystemSlots.store_page_name.value, KaironSystemSlots.callback_identifier.value,
         }
         for slot in [s for s in KaironSystemSlots if s.value in non_conversational_slots]:
             initial_value = None

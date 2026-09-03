@@ -106,6 +106,7 @@ async def create_order(
         bot=bot,
         sender_id=request_data.sender_id,
         persona_type=request_data.persona_type,
+        callback_identifier=request_data.callback_identifier,
         order_payload=request_data.order_details,
     )
     return Response(data=result)

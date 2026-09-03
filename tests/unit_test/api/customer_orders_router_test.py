@@ -177,7 +177,7 @@ class TestCreateOrderRouter:
 
     @pytest.mark.asyncio
     async def test_create_order_success(self):
-        req = CreateOrderRequest(sender_id="enc_s", persona_type="fnb", order_details={"item": "X"})
+        req = CreateOrderRequest(sender_id="enc_s", persona_type="fnb", callback_identifier="test_cb", order_details={"item": "X"})
         expected = {"order_id": "o1", "payment_id": None, "payment_link": None}
         with patch(
             "kairon.api.app.routers.bot.customer_orders.CustomerOrderProcessor.create_order",
@@ -188,13 +188,14 @@ class TestCreateOrderRouter:
             bot=BOT,
             sender_id="enc_s",
             persona_type="fnb",
+            callback_identifier="test_cb",
             order_payload={"item": "X"},
         )
         assert result.data == expected
 
     @pytest.mark.asyncio
     async def test_create_order_customer_not_found_raises(self):
-        req = CreateOrderRequest(sender_id="enc_none", order_details={"item": "Y"})
+        req = CreateOrderRequest(sender_id="enc_none", callback_identifier="test_cb", order_details={"item": "Y"})
         with patch(
             "kairon.api.app.routers.bot.customer_orders.CustomerOrderProcessor.create_order",
             side_effect=AppException("Customer not found"),

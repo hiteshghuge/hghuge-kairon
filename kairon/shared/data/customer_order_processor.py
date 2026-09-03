@@ -197,7 +197,7 @@ class CustomerOrderProcessor:
 
 
     @staticmethod
-    def create_order(bot: Text, sender_id: str, persona_type: Optional[str], order_payload: Dict) -> Dict:
+    def create_order(bot: Text, sender_id: str, persona_type: Optional[str], order_payload: Dict, callback_identifier: str) -> Dict:
         plain_id = CustomerOrderProcessor._decrypt(sender_id)
         try:
             customer = CustomerDetails.objects(bot=bot, sender_id=plain_id, status=True).get()
@@ -231,10 +231,8 @@ class CustomerOrderProcessor:
             try:
                 store_page = StorePageAction.objects(bot=bot, status=True).get()
                 page_name = store_page.page_name
-                callback_identifier = store_page.callback_identifier
             except DoesNotExist:
                 page_name = "catalog"
-                callback_identifier = None
             try:
                 action = RazorpayAction.objects(bot=bot, status=True).get()
             except DoesNotExist:

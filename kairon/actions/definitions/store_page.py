@@ -38,12 +38,14 @@ class ActionStorePage(ActionsBase):
         action_config = self.retrieve_config()
         page_name = action_config.get("page_name", "")
         identifier_slot = action_config.get("identifier_slot", "")
+        callback_identifier_slot = action_config.get("callback_identifier")
 
         try:
             from kairon import Utility
             from kairon.shared.auth import Authentication
 
             identifier_value = tracker.get_slot(identifier_slot)
+            callback_identifier_value=tracker.get_slot(callback_identifier_slot)
             if not identifier_value or (isinstance(identifier_value, str) and not identifier_value.strip()):
                 raise ActionFailure(f"Slot '{identifier_slot}' is absent or empty for sender {tracker.sender_id}")
 
@@ -60,6 +62,7 @@ class ActionStorePage(ActionsBase):
             slots["user_identifier"] = encrypted_id
             slots["temp_token"] = token
             slots["store_page_name"] = page_name
+            slots["callback_identifier"] = callback_identifier_value
 
         except ActionFailure as e:
             exception = str(e)

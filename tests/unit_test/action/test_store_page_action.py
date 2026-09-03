@@ -70,7 +70,7 @@ class TestActionStorePage:
     @pytest.mark.asyncio
     async def test_execute_success(self, tracker, dispatcher):
         self._make_config(name="exec_ok", bot="bot_cat_exec")
-        tracker.get_slot.side_effect = lambda k: "bot_cat_exec" if k == "bot" else "P-001"
+        tracker.get_slot.side_effect = lambda k: {"bot": "bot_cat_exec", "product_id": "P-001"}.get(k)
 
         with patch("kairon.shared.utils.Utility.encrypt_message",
                    return_value="enc_P-001") as mock_enc, \
@@ -86,12 +86,13 @@ class TestActionStorePage:
         assert result["user_identifier"] == "enc_P-001"
         assert result["temp_token"] == "tok_abc"
         assert result["store_page_name"] == "product_page"
+        assert result["callback_identifier"] is None
         mock_log.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_execute_slots_set_correctly(self, tracker, dispatcher):
         self._make_config(name="exec_slots", bot="bot_cat_slots")
-        tracker.get_slot.side_effect = lambda k: "bot_cat_slots" if k == "bot" else "ITEM-42"
+        tracker.get_slot.side_effect = lambda k: {"bot": "bot_cat_slots", "product_id": "ITEM-42"}.get(k)
 
         with patch("kairon.shared.utils.Utility.encrypt_message",
                    return_value="enc_ITEM-42"), \
@@ -105,6 +106,40 @@ class TestActionStorePage:
         assert result["user_identifier"] == "enc_ITEM-42"
         assert result["temp_token"] == "jwt_token"
         assert result["store_page_name"] == "product_page"
+        assert result["callback_identifier"] is None
+
+    @pytest.mark.asyncio
+    async def test_execute_with_callback_identifier_configured(self, tracker, dispatcher):
+        self._make_config(name="exec_cb_id", bot="bot_cat_cb", callback_identifier="cb_slot")
+        tracker.get_slot.side_effect = lambda k: {
+            "bot": "bot_cat_cb", "product_id": "P-007", "cb_slot": "cb-value-123"
+        }.get(k)
+
+        with patch("kairon.shared.utils.Utility.encrypt_message", return_value="enc_P-007"), \
+             patch("kairon.shared.auth.Authentication.create_store_page_token", return_value="tok_cb"), \
+             patch("kairon.shared.actions.data_objects.ActionServerLogs.save"):
+            result = await ActionStorePage("bot_cat_cb", "exec_cb_id").execute(
+                dispatcher, tracker, {}, action_call={}
+            )
+
+        assert result["callback_identifier"] == "cb-value-123"
+        assert result["user_identifier"] == "enc_P-007"
+        assert result["temp_token"] == "tok_cb"
+        assert result["store_page_name"] == "product_page"
+
+    @pytest.mark.asyncio
+    async def test_execute_without_callback_identifier_sets_none(self, tracker, dispatcher):
+        self._make_config(name="exec_no_cb", bot="bot_cat_no_cb")
+        tracker.get_slot.side_effect = lambda k: {"bot": "bot_cat_no_cb", "product_id": "P-008"}.get(k)
+
+        with patch("kairon.shared.utils.Utility.encrypt_message", return_value="enc_P-008"), \
+             patch("kairon.shared.auth.Authentication.create_store_page_token", return_value="tok_no_cb"), \
+             patch("kairon.shared.actions.data_objects.ActionServerLogs.save"):
+            result = await ActionStorePage("bot_cat_no_cb", "exec_no_cb").execute(
+                dispatcher, tracker, {}, action_call={}
+            )
+
+        assert result["callback_identifier"] is None
 
     # ─── execute: slot empty / absent ─────────────────────────────────────────
 
